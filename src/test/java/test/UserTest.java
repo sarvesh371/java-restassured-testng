@@ -1,18 +1,23 @@
 package test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javafaker.Faker;
 import io.restassured.response.Response;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import pages.Price;
 import pages.UserPages;
+import payload.BitcoinPriceIndex;
 import payload.User;
 
 public class UserTest {
 
     Faker faker;
     User userPayload;
+
     UserPages userPages = new UserPages();
+    Price pricePage = new Price();
 
     @BeforeClass
     public void beforeClass() {
@@ -48,7 +53,27 @@ public class UserTest {
         // Verify update
         Response responseGet = userPages.getUser(userPayload.getUsername());
         Assert.assertEquals(responseGet.statusCode(), 200);
-
     }
+
+    @Test(priority = 4)
+    public void verifyPrice() {
+        Response response = pricePage.getPrice();
+        Assert.assertEquals(response.statusCode(), 200, "Status code is not 200");
+
+        try {
+            // Deserialize the response JSON into BitcoinPriceIndex class
+            ObjectMapper objectMapper = new ObjectMapper();
+            BitcoinPriceIndex bitcoinPriceIndex = objectMapper.readValue(response.asString(), BitcoinPriceIndex.class);
+
+            // Verify the schema
+            Assert.assertNotNull(bitcoinPriceIndex.getTime(), "Time object is null");
+            Assert.assertNotNull(bitcoinPriceIndex.getChartName(), "ChartName is null");
+            Assert.assertNotNull(bitcoinPriceIndex.getBpi(), "Bpi map is null");
+
+        } catch (Exception e) {
+            Assert.fail("Failed to deserialize or verify response schema: " + e.getMessage());
+        }
+    }
+
 
 }
